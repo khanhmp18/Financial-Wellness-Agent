@@ -541,24 +541,13 @@ st.markdown(f"""
 col_left, col_right = st.columns([1, 1], gap="large")
 
 with col_left:
-    # Metrics panel
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-title">Key Metrics</div>',
-        unsafe_allow_html=True
-    )
-
-    def status_dot(condition_red, condition_yellow):
-        if condition_red:
-            return "#EF4444"
-        if condition_yellow:
-            return "#F59E0B"
-        return "#10B981"
-
-    metrics = [
+    metrics_html = """
+    <div class="panel">
+        <div class="section-title">Key Metrics</div>
+    """
+    metrics_rows = [
         ("Total Monthly Spend",
-         f"${row['total_spend']:,.2f}",
-         None, None),
+         f"${row['total_spend']:,.2f}", None, None),
         ("Credit Utilization",
          f"{row['credit_utilization']:.1%}",
          row["credit_utilization"] > 0.7,
@@ -584,9 +573,9 @@ with col_left:
          row["overdraft_frequency"] > 1),
     ]
 
-    for name, value, red, yellow in metrics:
+    for name, value, red, yellow in metrics_rows:
         if red is not None:
-            dot_color = status_dot(red, yellow)
+            dot_color = "#EF4444" if red else "#F59E0B" if yellow else "#10B981"
             dot_html = (
                 f'<span class="metric-status" '
                 f'style="background:{dot_color};'
@@ -597,8 +586,7 @@ with col_left:
                 '<span class="metric-status" '
                 'style="background:rgba(255,255,255,0.15);"></span>'
             )
-
-        st.markdown(f"""
+        metrics_html += f"""
         <div class="metric-row">
             <span class="metric-name">{name}</span>
             <span style="display:flex;align-items:center;">
@@ -606,8 +594,84 @@ with col_left:
                 {dot_html}
             </span>
         </div>
-        """, unsafe_allow_html=True)
+        """
 
+    metrics_html += "</div>"
+    st.markdown(metrics_html, unsafe_allow_html=True)
+
+with col_right:
+    gauge_color = (
+        "#EF4444" if score > 60
+        else "#F59E0B" if score > 30
+        else "#10B981"
+    )
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">Stress Score</div>',
+        unsafe_allow_html=True
+    )
+
+    fig_gauge = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=score,
+        number={
+            "font": {"size": 48, "family": "Playfair Display",
+                     "color": gauge_color},
+        },
+        domain={"x": [0, 1], "y": [0, 1]},
+        gauge={
+            "axis": {
+                "range": [0, 100],
+                "tickwidth": 0,
+                "tickcolor": "rgba(0,0,0,0)",
+                "tickfont": {"color": "rgba(232,230,225,0.2)",
+                             "size": 10}
+            },
+            "bar":  {"color": gauge_color, "thickness": 0.25},
+            "bgcolor": "rgba(0,0,0,0)",
+            "borderwidth": 0,
+            "steps": [
+                {"range": [0,  30],
+                 "color": "rgba(16,185,129,0.08)"},
+                {"range": [30, 60],
+                 "color": "rgba(245,158,11,0.08)"},
+                {"range": [60, 100],
+                 "color": "rgba(239,68,68,0.08)"}
+            ],
+            "threshold": {
+                "line": {"color": gauge_color, "width": 2},
+                "thickness": 0.8,
+                "value": score
+            }
+        }
+    ))
+    fig_gauge.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=220,
+        margin=dict(t=20, b=0, l=20, r=20),
+        font={"color": "#E8E6E1"}
+    )
+    st.plotly_chart(fig_gauge, use_container_width=True,
+                    config={"displayModeBar": False})
+
+    st.markdown(f"""
+    <div style="margin-top:0.5rem;">
+        <div style="display:flex;justify-content:space-between;
+             font-family:'DM Mono',monospace;font-size:0.65rem;
+             color:rgba(232,230,225,0.3);margin-bottom:0.5rem;">
+            <span>0</span><span>LOW</span>
+            <span>MEDIUM</span><span>HIGH</span><span>100</span>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.05);
+             border-radius:100px;overflow:hidden;">
+            <div style="height:100%;width:{score}%;
+                 background:linear-gradient(90deg,#10B981,{gauge_color});
+                 border-radius:100px;">
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_right:
@@ -918,3 +982,5 @@ st.markdown("""
     </span>
 </div>
 """, unsafe_allow_html=True)
+
+col_left
