@@ -8,32 +8,354 @@ import importlib.util
 DB_PATH = "data/financial_wellness.db"
 
 st.set_page_config(
-    page_title="Financial Wellness",
-    page_icon="💳",
-    layout="wide"
+    page_title="FinWell — Financial Wellness",
+    page_icon="💎",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# ── Load shap explainer ───────────────────────────
+# ── Custom CSS ────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, [data-testid="stAppViewContainer"] {
+    background: #0F172A !important;
+    color: #E8E6E1 !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(16,185,129,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(6,182,212,0.10) 0%, transparent 60%),
+        #0F172A !important;
+}
+
+[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stSidebar"] { display: none !important; }
+
+/* ── Hide streamlit chrome ── */
+#MainMenu, footer, header { visibility: hidden !important; }
+.block-container {
+    padding: 2rem 3rem !important;
+    max-width: 1400px !important;
+}
+
+/* ── Typography ── */
+h1, h2, h3 {
+    font-family: 'Playfair Display', serif !important;
+    letter-spacing: -0.02em;
+}
+
+/* ── Top Nav Bar ── */
+.nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 0 2.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 2.5rem;
+}
+.nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #E8E6E1;
+    letter-spacing: -0.03em;
+}
+.nav-logo span {
+    color: #10B981;
+}
+.nav-badge {
+    background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: #10B981;
+    font-size: 0.7rem;
+    font-family: 'DM Mono', monospace;
+    padding: 0.3rem 0.8rem;
+    border-radius: 100px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* ── KPI Cards ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.kpi-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 1.4rem 1.6rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.kpi-card:hover {
+    border-color: rgba(255,255,255,0.15);
+}
+.kpi-label {
+    font-size: 0.72rem;
+    font-family: 'DM Mono', monospace;
+    color: rgba(232,230,225,0.4);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+}
+.kpi-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #E8E6E1;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+}
+.kpi-sub {
+    font-size: 0.75rem;
+    color: rgba(232,230,225,0.35);
+}
+
+/* ── Member Card ── */
+.member-header {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 2rem 2.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.member-id-display {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: rgba(232,230,225,0.4);
+    margin-bottom: 0.3rem;
+}
+.member-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #E8E6E1;
+}
+
+/* ── Risk Badge ── */
+.risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.4rem;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em;
+}
+.risk-high {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.35);
+    color: #F87171;
+}
+.risk-medium {
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.35);
+    color: #FBB432;
+}
+.risk-low {
+    background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.35);
+    color: #34D399;
+}
+
+/* ── Section Title ── */
+.section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #E8E6E1;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+}
+
+/* ── Metrics Table ── */
+.metric-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.metric-row:last-child { border-bottom: none; }
+.metric-name {
+    font-size: 0.82rem;
+    color: rgba(232,230,225,0.5);
+    font-family: 'DM Sans', sans-serif;
+}
+.metric-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    color: #E8E6E1;
+    font-weight: 500;
+}
+.metric-status {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-left: 0.6rem;
+    display: inline-block;
+}
+
+/* ── Panel ── */
+.panel {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 1.8rem;
+    height: 100%;
+}
+
+/* ── AI Guidance Box ── */
+.guidance-box {
+    background: linear-gradient(135deg,
+        rgba(16,185,129,0.06) 0%,
+        rgba(6,182,212,0.04) 100%);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: 20px;
+    padding: 2rem 2.5rem;
+    margin-top: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+.guidance-box::before {
+    content: '"';
+    position: absolute;
+    top: -1rem; left: 1.5rem;
+    font-family: 'Playfair Display', serif;
+    font-size: 8rem;
+    color: rgba(16,185,129,0.1);
+    line-height: 1;
+}
+.guidance-text {
+    font-size: 0.92rem;
+    line-height: 1.8;
+    color: rgba(232,230,225,0.8);
+    font-family: 'DM Sans', sans-serif;
+    position: relative;
+    z-index: 1;
+}
+.guidance-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #10B981;
+    margin-bottom: 1rem;
+}
+
+/* ── Filter Row ── */
+.filter-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(232,230,225,0.35);
+    margin-bottom: 0.4rem;
+}
+
+/* ── Streamlit widget overrides ── */
+[data-testid="stSelectbox"] > div > div {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important;
+    color: #E8E6E1 !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+[data-testid="stSelectbox"] label {
+    font-family: 'DM Mono', monospace !important;
+    font-size: 0.65rem !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    color: rgba(232,230,225,0.35) !important;
+}
+
+/* ── Button ── */
+.stButton > button {
+    background: linear-gradient(135deg, #10B981, #059669) !important;
+    color: #080C14 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    padding: 0.75rem 2rem !important;
+    letter-spacing: 0.02em !important;
+    transition: all 0.2s !important;
+    width: 100% !important;
+}
+.stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 8px 24px rgba(16,185,129,0.3) !important;
+}
+
+/* ── Divider ── */
+hr { border-color: rgba(255,255,255,0.06) !important; }
+
+/* ── Spinner ── */
+[data-testid="stSpinner"] { color: #10B981 !important; }
+
+/* ── Plotly charts transparent bg ── */
+.js-plotly-plot .plotly .bg { fill: transparent !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Load functions ────────────────────────────────
 @st.cache_resource
 def load_explainer():
     spec = importlib.util.spec_from_file_location(
         "shap_explainer", "src/04_shap_explainer.py"
     )
-    shap_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(shap_mod)
-    return shap_mod.explain_member
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.explain_member
 
-# ── Load LLM guidance ─────────────────────────────
 @st.cache_resource
 def load_guidance():
     spec = importlib.util.spec_from_file_location(
         "llm_guidance", "src/05_llm_guidance.py"
     )
-    llm_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(llm_mod)
-    return llm_mod.generate_guidance
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.generate_guidance
 
-# ── Load all data ─────────────────────────────────
 @st.cache_data
 def load_features():
     conn = sqlite3.connect(DB_PATH)
@@ -42,30 +364,107 @@ def load_features():
     df["member_id"] = df["member_id"].astype(str).str.strip()
     return df
 
-@st.cache_data
-def load_dq():
-    conn = sqlite3.connect(DB_PATH)
-    df   = pd.read_sql("SELECT * FROM data_quality_log", conn)
-    conn.close()
-    return df
-
 df = load_features()
-dq = load_dq()
 
-# ── Sidebar ───────────────────────────────────────
-st.sidebar.title("💳 Financial Wellness")
-st.sidebar.markdown("---")
-st.sidebar.caption(f"Total Members: {df['member_id'].nunique():,}")
-st.sidebar.caption(f"Total Records: {len(df):,}")
+# ── Nav Bar ───────────────────────────────────────
+# ── Nav Bar ───────────────────────────────────────
+st.markdown("""
+<!-- Hero Section -->
+<div style="text-align:center;padding:5rem 2rem 3rem;">
+    <div style="display:inline-block;font-family:'DM Mono',monospace;
+         font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;
+         color:#10B981;margin-bottom:1.5rem;">
+        ✦ Financial Wellness Platform
+    </div>
+    <h1 style="font-family:'Playfair Display',serif;font-size:3.5rem;
+         font-weight:700;line-height:1.1;margin-bottom:1rem;
+         letter-spacing:-0.02em;color:#E8E6E1;">
+        Member Risk <em style="font-style:italic;color:#10B981;">Intelligence</em><br>Dashboard
+    </h1>
+    <p style="color:rgba(232,230,225,0.45);font-size:1rem;
+         max-width:500px;margin:0 auto 2.5rem;line-height:1.7;
+         font-family:'DM Sans',sans-serif;">
+        AI-powered financial stress detection with personalized
+        wellness guidance for every member.
+    </p>
+</div>
 
-# ════════════════════════════════════════════════
-# MEMBER LOOKUP — Main Page
-# ════════════════════════════════════════════════
-st.title("💳 Financial Wellness")
-st.caption("Member Financial Health & Risk Analysis")
+<!-- Stats Row -->
+<div style="display:flex;justify-content:center;gap:4rem;
+     padding:2rem 0;border-top:1px solid rgba(255,255,255,0.05);
+     border-bottom:1px solid rgba(255,255,255,0.05);
+     margin-bottom:3rem;">
+    <div style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:2.2rem;
+             font-weight:700;color:#E8E6E1;">{total:,}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;
+             letter-spacing:0.1em;text-transform:uppercase;
+             color:rgba(232,230,225,0.3);margin-top:0.3rem;">Total Members</div>
+    </div>
+    <div style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:2.2rem;
+             font-weight:700;color:#F87171;">{high:,}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;
+             letter-spacing:0.1em;text-transform:uppercase;
+             color:rgba(232,230,225,0.3);margin-top:0.3rem;">High Risk</div>
+    </div>
+    <div style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:2.2rem;
+             font-weight:700;color:#FBB432;">{medium:,}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;
+             letter-spacing:0.1em;text-transform:uppercase;
+             color:rgba(232,230,225,0.3);margin-top:0.3rem;">Medium Risk</div>
+    </div>
+    <div style="text-align:center;">
+        <div style="font-family:'Playfair Display',serif;font-size:2.2rem;
+             font-weight:700;color:#34D399;">{avg_score}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;
+             letter-spacing:0.1em;text-transform:uppercase;
+             color:rgba(232,230,225,0.3);margin-top:0.3rem;">Avg Risk Score</div>
+    </div>
+</div>
+""".format(
+    total=df["member_id"].nunique(),
+    high=int((df["risk_tier"] == "High").sum()),
+    medium=int((df["risk_tier"] == "Medium").sum()),
+    avg_score=round(df["risk_score"].mean(), 1)
+), unsafe_allow_html=True)
 
-# ── Filters row ───────────────────────────────────
-col1, col2, col3 = st.columns(3)
+# ── Portfolio KPIs ────────────────────────────────
+total    = df["member_id"].nunique()
+high     = int((df["risk_tier"] == "High").sum())
+medium   = int((df["risk_tier"] == "Medium").sum())
+low      = int((df["risk_tier"] == "Low").sum())
+avg_score= round(df["risk_score"].mean(), 1)
+avg_util = df["credit_utilization"].mean()
+
+st.markdown(f"""
+<div class="kpi-grid">
+    <div class="kpi-card" style="--accent:#6366F1;">
+        <div class="kpi-label">Total Members</div>
+        <div class="kpi-value">{total:,}</div>
+        <div class="kpi-sub">Active cardholders</div>
+    </div>
+    <div class="kpi-card" style="--accent:#EF4444;">
+        <div class="kpi-label">High Risk</div>
+        <div class="kpi-value" style="color:#F87171;">{high:,}</div>
+        <div class="kpi-sub">{high/total:.1%} of portfolio</div>
+    </div>
+    <div class="kpi-card" style="--accent:#F59E0B;">
+        <div class="kpi-label">Medium Risk</div>
+        <div class="kpi-value" style="color:#FBB432;">{medium:,}</div>
+        <div class="kpi-sub">{medium/total:.1%} of portfolio</div>
+    </div>
+    <div class="kpi-card" style="--accent:#10B981;">
+        <div class="kpi-label">Avg Risk Score</div>
+        <div class="kpi-value" style="color:#34D399;">{avg_score}</div>
+        <div class="kpi-sub">Portfolio average / 100</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Filter Row ────────────────────────────────────
+col1, col2, col3 = st.columns([1, 2, 1])
 
 with col1:
     tier_filter = st.selectbox(
@@ -73,23 +472,16 @@ with col1:
         ["All", "High", "Medium", "Low"]
     )
 
-# Apply tier filter
-if tier_filter == "All":
-    filtered_df = df
-else:
-    filtered_df = df[df["risk_tier"] == tier_filter]
-
-# Sort by risk score so highest risk appears first
+filtered_df = df if tier_filter == "All" \
+    else df[df["risk_tier"] == tier_filter]
 filtered_df = filtered_df.sort_values(
     "risk_score", ascending=False
 )
-
-# Get all unique members after filter
 all_members = filtered_df["member_id"].unique().tolist()
 
 with col2:
     member_id = st.selectbox(
-        f"Select Member ID ({len(all_members):,} members)",
+        f"Member ID  —  {len(all_members):,} members",
         all_members
     )
 
@@ -98,191 +490,431 @@ with col3:
         df["member_id"] == member_id
     ]["month"].unique()
     month = st.selectbox(
-        "Select Month",
+        "Period",
         sorted(month_list, reverse=True)
     )
 
-# ── Member data ───────────────────────────────────
+# ── Load member data ──────────────────────────────
 member_row = df[
     (df["member_id"] == member_id) &
     (df["month"] == month)
 ]
 
-if not member_row.empty:
-    row   = member_row.iloc[0]
-    score = row["risk_score"]
-    tier  = row["risk_tier"]
-    color = {
-        "High":   "🔴",
-        "Medium": "🟡",
-        "Low":    "🟢"
-    }.get(tier, "⚪")
+if member_row.empty:
+    st.warning("No data found for this member/period.")
+    st.stop()
 
-    st.divider()
+row   = member_row.iloc[0]
+score = row["risk_score"]
+tier  = row["risk_tier"]
 
-    # ── KPI row ───────────────────────────────────
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Risk Score",   f"{score:.1f} / 100")
-    col2.metric("Risk Tier",    f"{color} {tier}")
-    col3.metric("Credit Util",  f"{row['credit_utilization']:.1%}")
-    col4.metric("Savings Rate", f"{row['savings_rate']:.1%}")
+risk_class = {
+    "High": "risk-high",
+    "Medium": "risk-medium",
+    "Low": "risk-low"
+}.get(tier, "risk-low")
 
-    st.divider()
+risk_dot = {
+    "High": "●", "Medium": "●", "Low": "●"
+}.get(tier, "●")
 
-    # ── Metrics + Gauge ───────────────────────────
-    col1, col2 = st.columns(2)
+# ── Member Header ─────────────────────────────────
+st.markdown(f"""
+<div class="member-header">
+    <div>
+        <div class="member-id-display">MEMBER ID: {member_id}</div>
+        <div class="member-name">Financial Profile — {month}</div>
+    </div>
+    <div style="text-align:right;">
+        <div class="risk-badge {risk_class}">
+            {risk_dot} {tier} Risk
+        </div>
+        <div style="margin-top:0.5rem;font-family:'DM Mono',monospace;
+             font-size:0.75rem;color:rgba(232,230,225,0.3);">
+            STRESS SCORE: {score:.1f} / 100
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-    with col1:
-        st.subheader("Financial Metrics")
-        metrics_data = {
-            "Metric": [
-                "Total Monthly Spend",
-                "Credit Utilization",
-                "Savings Rate",
-                "Discretionary Ratio",
-                "Spending Volatility",
-                "MoM Spend Change",
-                "Overdraft Frequency"
+# ── Main content ──────────────────────────────────
+col_left, col_right = st.columns([1, 1], gap="large")
+
+with col_left:
+    # Metrics panel
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">Key Metrics</div>',
+        unsafe_allow_html=True
+    )
+
+    def status_dot(condition_red, condition_yellow):
+        if condition_red:
+            return "#EF4444"
+        if condition_yellow:
+            return "#F59E0B"
+        return "#10B981"
+
+    metrics = [
+        ("Total Monthly Spend",
+         f"${row['total_spend']:,.2f}",
+         None, None),
+        ("Credit Utilization",
+         f"{row['credit_utilization']:.1%}",
+         row["credit_utilization"] > 0.7,
+         row["credit_utilization"] > 0.4),
+        ("Savings Rate",
+         f"{row['savings_rate']:.1%}",
+         row["savings_rate"] < 0.05,
+         row["savings_rate"] < 0.1),
+        ("Discretionary Ratio",
+         f"{row['discretionary_ratio']:.1%}",
+         row["discretionary_ratio"] > 0.6,
+         row["discretionary_ratio"] > 0.4),
+        ("Spending Volatility",
+         f"{row['spending_volatility']:.2f}",
+         None, None),
+        ("MoM Spend Change",
+         f"{row['mom_spend_change']:+.1%}",
+         row["mom_spend_change"] > 0.2,
+         row["mom_spend_change"] > 0.1),
+        ("Overdraft Frequency",
+         f"{row['overdraft_frequency']:.0f}x",
+         row["overdraft_frequency"] > 3,
+         row["overdraft_frequency"] > 1),
+    ]
+
+    for name, value, red, yellow in metrics:
+        if red is not None:
+            dot_color = status_dot(red, yellow)
+            dot_html = (
+                f'<span class="metric-status" '
+                f'style="background:{dot_color};'
+                f'box-shadow:0 0 6px {dot_color}66;"></span>'
+            )
+        else:
+            dot_html = (
+                '<span class="metric-status" '
+                'style="background:rgba(255,255,255,0.15);"></span>'
+            )
+
+        st.markdown(f"""
+        <div class="metric-row">
+            <span class="metric-name">{name}</span>
+            <span style="display:flex;align-items:center;">
+                <span class="metric-value">{value}</span>
+                {dot_html}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with col_right:
+    # Risk gauge
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">Stress Score</div>',
+        unsafe_allow_html=True
+    )
+
+    gauge_color = (
+        "#EF4444" if score > 60
+        else "#F59E0B" if score > 30
+        else "#10B981"
+    )
+
+    fig_gauge = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=score,
+        number={
+            "font": {"size": 48, "family": "Playfair Display",
+                     "color": gauge_color},
+            "suffix": ""
+        },
+        domain={"x": [0, 1], "y": [0, 1]},
+        gauge={
+            "axis": {
+                "range": [0, 100],
+                "tickwidth": 0,
+                "tickcolor": "rgba(0,0,0,0)",
+                "tickfont": {"color": "rgba(232,230,225,0.2)",
+                             "size": 10}
+            },
+            "bar":  {"color": gauge_color, "thickness": 0.25},
+            "bgcolor": "rgba(0,0,0,0)",
+            "borderwidth": 0,
+            "steps": [
+                {"range": [0,  30],
+                 "color": "rgba(16,185,129,0.08)"},
+                {"range": [30, 60],
+                 "color": "rgba(245,158,11,0.08)"},
+                {"range": [60, 100],
+                 "color": "rgba(239,68,68,0.08)"}
             ],
-            "Value": [
-                f"${row['total_spend']:,.2f}",
-                f"{row['credit_utilization']:.1%}",
-                f"{row['savings_rate']:.1%}",
-                f"{row['discretionary_ratio']:.1%}",
-                f"{row['spending_volatility']:.2f}",
-                f"{row['mom_spend_change']:+.1%}",
-                f"{row['overdraft_frequency']:.0f}"
-            ],
-            "Status": [
-                "ℹ️",
-                "🔴" if row["credit_utilization"] > 0.7
-                     else "🟡" if row["credit_utilization"] > 0.4
-                     else "🟢",
-                "🔴" if row["savings_rate"] < 0.05
-                     else "🟡" if row["savings_rate"] < 0.1
-                     else "🟢",
-                "🔴" if row["discretionary_ratio"] > 0.6
-                     else "🟡" if row["discretionary_ratio"] > 0.4
-                     else "🟢",
-                "ℹ️",
-                "🔴" if row["mom_spend_change"] > 0.2
-                     else "🟡" if row["mom_spend_change"] > 0.1
-                     else "🟢",
-                "🔴" if row["overdraft_frequency"] > 3
-                     else "🟡" if row["overdraft_frequency"] > 1
-                     else "🟢"
-            ]
-        }
-        st.dataframe(
-            pd.DataFrame(metrics_data),
-            hide_index=True,
-            use_container_width=True
-        )
-
-    with col2:
-        st.subheader("Risk Gauge")
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=score,
-            domain={"x": [0, 1], "y": [0, 1]},
-            title={"text": "Financial Stress Score"},
-            gauge={
-                "axis": {"range": [0, 100]},
-                "bar":  {"color": "#6366f1"},
-                "steps": [
-                    {"range": [0,  30], "color": "#dcfce7"},
-                    {"range": [30, 60], "color": "#fef9c3"},
-                    {"range": [60, 100],"color": "#fee2e2"}
-                ],
-                "threshold": {
-                    "line":      {"color": "red", "width": 4},
-                    "thickness": 0.75,
-                    "value":     60
-                }
+            "threshold": {
+                "line": {"color": gauge_color, "width": 2},
+                "thickness": 0.8,
+                "value": score
             }
-        ))
-        fig.update_layout(height=300)
-        st.plotly_chart(fig, use_container_width=True)
-
-    # ── Spend History ─────────────────────────────
-    st.divider()
-    st.subheader("📈 Member Spend History")
-    member_history = df[
-        df["member_id"] == member_id
-    ].sort_values("month")
-
-    fig = px.line(
-        member_history,
-        x="month",
-        y=["total_spend", "discretionary_spend",
-           "essential_spend"],
-        markers=True,
-        labels={"value": "Amount ($)",
-                "month": "Month",
-                "variable": "Category"},
-        color_discrete_map={
-            "total_spend":         "#6366f1",
-            "discretionary_spend": "#f59e0b",
-            "essential_spend":     "#22c55e"
         }
+    ))
+    fig_gauge.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=220,
+        margin=dict(t=20, b=0, l=20, r=20),
+        font={"color": "#E8E6E1"}
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_gauge, use_container_width=True,
+                    config={"displayModeBar": False})
 
-    # ── Risk Score History ────────────────────────
-    st.subheader("📊 Risk Score History")
-    fig2 = px.line(
-        member_history,
-        x="month",
-        y="risk_score",
-        markers=True,
-        color_discrete_sequence=["#ef4444"],
-        labels={"risk_score": "Risk Score",
-                "month": "Month"}
-    )
-    fig2.add_hrect(y0=60, y1=100, fillcolor="red",
-                   opacity=0.05,
-                   annotation_text="High Risk Zone")
-    fig2.add_hrect(y0=30, y1=60, fillcolor="orange",
-                   opacity=0.05,
-                   annotation_text="Medium Risk Zone")
-    st.plotly_chart(fig2, use_container_width=True)
+    # Score breakdown bar
+    st.markdown(f"""
+    <div style="margin-top:0.5rem;">
+        <div style="display:flex;justify-content:space-between;
+             font-family:'DM Mono',monospace;font-size:0.65rem;
+             color:rgba(232,230,225,0.3);margin-bottom:0.5rem;">
+            <span>0</span><span>LOW</span>
+            <span>MEDIUM</span><span>HIGH</span><span>100</span>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.05);
+             border-radius:100px;overflow:hidden;">
+            <div style="height:100%;width:{score}%;
+                 background:linear-gradient(90deg,
+                 #10B981,{gauge_color});
+                 border-radius:100px;
+                 transition:width 0.5s ease;">
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # ── AI Guidance ───────────────────────────────
-    st.divider()
-    st.subheader("🤖 AI Financial Wellness Guidance")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.button("Generate AI Guidance", type="primary"):
-        with st.spinner("Analyzing member profile..."):
-            try:
-                explain_member    = load_explainer()
-                generate_guidance = load_guidance()
-                result   = explain_member(member_id, month)
-                guidance = generate_guidance(result)
-                st.success(guidance)
+# ── Spend History Chart ───────────────────────────
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">Spend History</div>',
+    unsafe_allow_html=True
+)
 
-                st.subheader("Top Risk Drivers (SHAP)")
-                shap_df = pd.DataFrame(
-                    result["explanation"].items(),
-                    columns=["Feature", "Impact"]
-                ).sort_values("Impact",
-                              key=abs,
-                              ascending=True)
-                fig = px.bar(
-                    shap_df,
-                    x="Impact",
-                    y="Feature",
-                    orientation="h",
-                    color="Impact",
-                    color_continuous_scale=[
-                        "green", "white", "red"
-                    ],
-                    color_continuous_midpoint=0
+member_history = df[
+    df["member_id"] == member_id
+].sort_values("month")
+
+fig_spend = go.Figure()
+
+fig_spend.add_trace(go.Scatter(
+    x=member_history["month"],
+    y=member_history["total_spend"],
+    name="Total Spend",
+    line=dict(color="#6366F1", width=2),
+    fill="tozeroy",
+    fillcolor="rgba(99,102,241,0.06)",
+    hovertemplate="$%{y:,.0f}<extra>Total</extra>"
+))
+fig_spend.add_trace(go.Scatter(
+    x=member_history["month"],
+    y=member_history["discretionary_spend"],
+    name="Discretionary",
+    line=dict(color="#F59E0B", width=2, dash="dot"),
+    hovertemplate="$%{y:,.0f}<extra>Discretionary</extra>"
+))
+fig_spend.add_trace(go.Scatter(
+    x=member_history["month"],
+    y=member_history["essential_spend"],
+    name="Essential",
+    line=dict(color="#10B981", width=2, dash="dot"),
+    hovertemplate="$%{y:,.0f}<extra>Essential</extra>"
+))
+
+fig_spend.update_layout(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    height=240,
+    margin=dict(t=10, b=30, l=10, r=10),
+    font={"color": "rgba(232,230,225,0.5)",
+          "family": "DM Sans"},
+    legend=dict(
+        orientation="h",
+        yanchor="bottom", y=1.02,
+        xanchor="right",  x=1,
+        font={"size": 11,
+              "color": "rgba(232,230,225,0.5)"},
+        bgcolor="rgba(0,0,0,0)"
+    ),
+    xaxis=dict(
+        showgrid=False,
+        showline=False,
+        tickfont={"size": 10}
+    ),
+    yaxis=dict(
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.04)",
+        showline=False,
+        tickprefix="$",
+        tickfont={"size": 10}
+    ),
+    hovermode="x unified"
+)
+st.plotly_chart(fig_spend, use_container_width=True,
+                config={"displayModeBar": False})
+
+# ── Risk Score History ────────────────────────────
+st.markdown(
+    '<div class="section-title">Risk Score Trend</div>',
+    unsafe_allow_html=True
+)
+
+fig_risk = go.Figure()
+fig_risk.add_hrect(
+    y0=60, y1=100,
+    fillcolor="rgba(239,68,68,0.04)",
+    line_width=0,
+    annotation_text="HIGH RISK ZONE",
+    annotation_font_size=9,
+    annotation_font_color="rgba(239,68,68,0.3)"
+)
+fig_risk.add_hrect(
+    y0=30, y1=60,
+    fillcolor="rgba(245,158,11,0.04)",
+    line_width=0
+)
+fig_risk.add_trace(go.Scatter(
+    x=member_history["month"],
+    y=member_history["risk_score"],
+    mode="lines+markers",
+    line=dict(color="#EF4444", width=2.5),
+    marker=dict(size=6, color="#EF4444",
+                line=dict(color="#080C14", width=2)),
+    fill="tozeroy",
+    fillcolor="rgba(239,68,68,0.05)",
+    hovertemplate="%{y:.1f}/100<extra>Risk Score</extra>"
+))
+
+fig_risk.update_layout(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    height=200,
+    margin=dict(t=10, b=30, l=10, r=10),
+    font={"color": "rgba(232,230,225,0.5)",
+          "family": "DM Sans"},
+    showlegend=False,
+    xaxis=dict(
+        showgrid=False,
+        showline=False,
+        tickfont={"size": 10}
+    ),
+    yaxis=dict(
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.04)",
+        showline=False,
+        range=[0, 105],
+        tickfont={"size": 10}
+    ),
+    hovermode="x unified"
+)
+st.plotly_chart(fig_risk, use_container_width=True,
+                config={"displayModeBar": False})
+
+# ── AI Guidance ───────────────────────────────────
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">AI Wellness Guidance</div>',
+    unsafe_allow_html=True
+)
+
+if st.button("✦  Generate Personalized Guidance"):
+    with st.spinner("Analyzing financial profile..."):
+        try:
+            explain_member    = load_explainer()
+            generate_guidance = load_guidance()
+            result   = explain_member(member_id, month)
+            guidance = generate_guidance(result)
+
+            st.markdown(f"""
+            <div class="guidance-box">
+                <div class="guidance-label">
+                    ✦ AI Financial Wellness Analysis
+                </div>
+                <div class="guidance-text">
+                    {guidance.replace(chr(10), '<br><br>')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # SHAP chart
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(
+                '<div class="section-title">'
+                'Risk Drivers</div>',
+                unsafe_allow_html=True
+            )
+            shap_df = pd.DataFrame(
+                result["explanation"].items(),
+                columns=["Feature", "Impact"]
+            ).sort_values("Impact", key=abs, ascending=True)
+
+            colors = [
+                "#10B981" if v < 0 else "#EF4444"
+                for v in shap_df["Impact"]
+            ]
+
+            fig_shap = go.Figure(go.Bar(
+                x=shap_df["Impact"],
+                y=shap_df["Feature"],
+                orientation="h",
+                marker_color=colors,
+                marker_line_width=0,
+                hovertemplate="%{x:+.1f} pts<extra>%{y}</extra>"
+            ))
+            fig_shap.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=280,
+                margin=dict(t=10, b=10, l=10, r=10),
+                font={"color": "rgba(232,230,225,0.5)",
+                      "family": "DM Sans", "size": 11},
+                xaxis=dict(
+                    showgrid=True,
+                    gridcolor="rgba(255,255,255,0.04)",
+                    zeroline=True,
+                    zerolinecolor="rgba(255,255,255,0.1)",
+                    zerolinewidth=1,
+                    tickfont={"size": 10}
+                ),
+                yaxis=dict(
+                    showgrid=False,
+                    tickfont={"size": 10}
                 )
-                st.plotly_chart(fig, use_container_width=True)
+            )
+            st.plotly_chart(fig_shap,
+                            use_container_width=True,
+                            config={"displayModeBar": False})
 
-            except Exception as e:
-                st.error(f"Error generating guidance: {e}")
-                st.info(
-                    "Make sure your API key is set in "
-                    "src/05_llm_guidance.py"
-                )
+        except Exception as e:
+            st.error(f"Error: {e}")
+            st.info(
+                "Make sure your API key is set in "
+                "src/05_llm_guidance.py"
+            )
+
+# ── Footer ────────────────────────────────────────
+st.markdown("""
+<div style="margin-top:4rem;padding-top:1.5rem;
+     border-top:1px solid rgba(255,255,255,0.05);
+     display:flex;justify-content:space-between;
+     align-items:center;">
+    <span style="font-family:'Playfair Display',serif;
+          font-size:1rem;color:rgba(232,230,225,0.2);">
+        FinWell
+    </span>
+    <span style="font-family:'DM Mono',monospace;
+          font-size:0.65rem;
+          color:rgba(232,230,225,0.15);
+          letter-spacing:0.1em;">
+        FINANCIAL WELLNESS ANALYTICS PLATFORM
+    </span>
+</div>
+""", unsafe_allow_html=True)

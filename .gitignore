@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+data/fraudTrain.csv
+data/fraudTest.csv
+.DS_Store
+.streamlit/secrets.toml
+output/guidance_samples.csv
+write_guidance.py
+write_dashboard.py

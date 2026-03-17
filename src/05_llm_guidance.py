@@ -2,6 +2,7 @@ import importlib.util
 import sqlite3
 import pandas as pd
 from groq import Groq
+import os
 
 # Load shap_explainer directly by file path
 spec = importlib.util.spec_from_file_location(
@@ -11,7 +12,8 @@ shap_mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(shap_mod)
 explain_member = shap_mod.explain_member
 
-API_KEY = "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"
+# API_KEY = "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"
+API_KEY = os.environ.get("GROQ_API_KEY", "gsk_your_key_here")
 DB_PATH = "data/financial_wellness.db"
 
 FEATURE_LABELS = {
