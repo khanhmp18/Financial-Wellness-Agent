@@ -12,8 +12,7 @@ shap_mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(shap_mod)
 explain_member = shap_mod.explain_member
 
-# API_KEY = "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"
-API_KEY = os.environ.get("GROQ_API_KEY", "gsk_your_key_here")
+API_KEY = os.environ.get("GROQ_API_KEY", "your_groq_api_key_here")
 DB_PATH = "data/financial_wellness.db"
 
 FEATURE_LABELS = {

@@ -51,7 +51,6 @@ def engineer_features(conn):
     )
 
     # ── Simulate credit utilization ───────────────────
-    # Higher discretionary + MoM growth = higher utilization
     np.random.seed(42)
     df["credit_utilization"] = (
         (df["discretionary_ratio"] * 0.5) +
@@ -71,12 +70,20 @@ def engineer_features(conn):
     ).round(0)
 
     # ── Stress label ──────────────────────────────────
-    df["stress_label"] = (
-        (df["credit_utilization"]  > 0.70) |
-        (df["savings_rate"]        < 0.05) |
-        (df["overdraft_frequency"] > 3)    |
-        (df["discretionary_ratio"] > 0.60)
-    ).astype(int)
+    df["stress_score_raw"] = (
+        (df["credit_utilization"]  > 0.50).astype(int) * 25 +
+        (df["credit_utilization"]  > 0.70).astype(int) * 15 +
+        (df["savings_rate"]        < 0.10).astype(int) * 20 +
+        (df["savings_rate"]        < 0.05).astype(int) * 15 +
+        (df["discretionary_ratio"] > 0.40).astype(int) * 15 +
+        (df["discretionary_ratio"] > 0.60).astype(int) * 10 +
+        (df["overdraft_frequency"] > 1).astype(int)    * 10 +
+        (df["mom_spend_change"]    > 0.10).astype(int) * 5  +
+        (df["spending_volatility"] > df["spending_volatility"].median()).astype(int) * 5
+    )
+
+    # ── Label stressed if raw score >= 30 ─────────────
+    df["stress_label"] = (df["stress_score_raw"] >= 30).astype(int)
 
     print(f"\nFeature Summary:")
     print(f"  Avg credit utilization: {df['credit_utilization'].mean():.2%}")

@@ -1,13 +1,27 @@
+# Virtual environment
 venv/
+
+# Python cache
 __pycache__/
 *.pyc
-*.pkl
+*.pyo
+
+# Large data files
 data/fraudTrain.csv
 data/fraudTest.csv
 data/financial_wellness.db
 data/credit_card_transactions.csv
+
+# Model and outputs
 output/
+*.pkl
+
+# Mac system files
 .DS_Store
+
+# Secrets
 .streamlit/secrets.toml
+
+# Temp scripts
 write_guidance.py
 write_dashboard.py

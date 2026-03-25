@@ -47,9 +47,12 @@ def train_model(df):
     # ── Train XGBoost ─────────────────────────────────
     print("\nTraining XGBoost model...")
     model = XGBClassifier(
-        n_estimators=100,
-        max_depth=4,
-        learning_rate=0.1,
+        n_estimators=200,
+        max_depth=3,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        min_child_weight=5,
         random_state=42,
         eval_metric="logloss",
         verbosity=0
