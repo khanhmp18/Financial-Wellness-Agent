@@ -5,6 +5,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 import importlib.util
 import os
+if not os.path.exists("data/financial_wellness.db"):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "gen_app", "app/gen_app.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.generate_database()
 
 DB_PATH = "data/financial_wellness.db"
 
