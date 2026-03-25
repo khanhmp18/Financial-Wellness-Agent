@@ -2,7 +2,7 @@ import pandas as pd
 import sqlite3
 import os
 
-# ── Config ─────────────────────────────────────────────────────
+# Config
 DB_PATH   = "data/financial_wellness.db"
 CSV_TRAIN = "data/fraudTrain.csv"
 CSV_TEST  = "data/fraudTest.csv"
@@ -21,7 +21,7 @@ def create_tables(conn):
     print("Tables created.")
 
 def load_data():
-    # ── Load CSVs ───────────────────────────────────────────────
+    # Load CSVs
     print("Loading fraudTrain.csv...")
     train = pd.read_csv(CSV_TRAIN)
     print(f"  Train rows: {len(train):,}")
@@ -75,11 +75,11 @@ def load_data():
     print(f"  Date range:    {df_clean['trans_date'].min()} "
           f"to {df_clean['trans_date'].max()}")
 
-    # ── Load into SQLite ────────────────────────────────────────
+    # Load into SQLite
     print("\nConnecting to SQLite database...")
     conn = sqlite3.connect(DB_PATH)
 
-    # Create tables first
+    # Create tables
     create_tables(conn)
 
     # Load transactions
@@ -92,7 +92,7 @@ def load_data():
         chunksize=10000   # load in chunks to avoid memory issues
     )
 
-    # ── Verify the load ─────────────────────────────────────────
+    # Verify the load
     print("\nVerifying load...")
     count = pd.read_sql(
         "SELECT COUNT(*) as total FROM transactions", conn
@@ -105,7 +105,7 @@ def load_data():
     print(f"\nSample rows:")
     print(sample.to_string())
 
-    # ── Run a quick SQL sanity check ────────────────────────────
+    # Run a quick SQL sanity check
     print("\nRunning SQL sanity checks...")
 
     checks = pd.read_sql("""

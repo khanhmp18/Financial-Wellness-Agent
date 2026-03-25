@@ -41,7 +41,7 @@ def load_model_and_data():
 def explain_member(member_id: str, month: str) -> dict:
     model, df = load_model_and_data()
 
-    # ── Get this member's row ─────────────────────────
+    # Get this member's row
     row = df[
         (df["member_id"].astype(str) == str(member_id)) &
         (df["month"] == month)
@@ -52,7 +52,7 @@ def explain_member(member_id: str, month: str) -> dict:
 
     X = row[FEATURES]
 
-    # ── Calculate SHAP values ─────────────────────────
+    # Calculate SHAP values
     explainer   = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X)
 
@@ -62,7 +62,7 @@ def explain_member(member_id: str, month: str) -> dict:
     else:
         sv = shap_values[0]
 
-    # ── Build explanation dict ────────────────────────
+    # Build explanation dict
     explanation = {}
     for feat, val in zip(FEATURES, sv):
         label = FEATURE_LABELS[feat]
@@ -116,14 +116,14 @@ def main():
     model, df = load_model_and_data()
     print(f"Loaded {len(df):,} member records")
 
-    # ── Portfolio-level SHAP ──────────────────────────
+    # Portfolio-level SHAP
     print("\nPortfolio-Wide Feature Impact (SHAP):")
     importance = explain_portfolio_shap()
     for _, row in importance.iterrows():
         bar = "█" * int(row["mean_shap_impact"] * 500)
         print(f"  {row['feature']:<35} {bar} {row['mean_shap_impact']:.4f}")
 
-    # ── Test individual member explanation ────────────
+    # Test individual member explanation
     print("\nTesting individual member explanation...")
 
     # Pick one high risk member to test
@@ -150,7 +150,7 @@ def main():
         bar = "█" * int(abs(impact) / 2)
         print(f"  {feat:<35} {direction} risk  {bar} ({impact:+.2f})")
 
-    # ── Save shap importance to output ────────────────
+    # Save shap importance to output
     importance.to_csv("output/shap_importance.csv", index=False)
     print("\nSHAP importance saved to output/shap_importance.csv")
 

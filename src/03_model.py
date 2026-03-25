@@ -3,12 +3,10 @@ import numpy as np
 import sqlite3
 import pickle
 import os
-from sklearn.ensemble        import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics         import (classification_report,
-                                     roc_auc_score,
-                                     confusion_matrix)
-from xgboost                 import XGBClassifier
+from sklearn.metrics import (classification_report, roc_auc_score, confusion_matrix)
+from xgboost import XGBClassifier
 
 DB_PATH    = "data/financial_wellness.db"
 MODEL_PATH = "output/stress_model.pkl"
@@ -37,14 +35,14 @@ def train_model(df):
     X = df[FEATURES]
     y = df["stress_label"]
 
-    # ── Train/test split ──────────────────────────────
+    # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
     print(f"\n  Train size: {len(X_train):,}")
     print(f"  Test size:  {len(X_test):,}")
 
-    # ── Train XGBoost ─────────────────────────────────
+    # Train XGBoost
     print("\nTraining XGBoost model...")
     model = XGBClassifier(
         n_estimators=200,
@@ -59,7 +57,7 @@ def train_model(df):
     )
     model.fit(X_train, y_train)
 
-    # ── Evaluate ──────────────────────────────────────
+    # Evaluate
     y_pred = model.predict(X_test)
     y_prob = model.predict_proba(X_test)[:, 1]
 
@@ -79,7 +77,7 @@ def train_model(df):
     print(f"  False Negatives: {cm[1][0]:,}  (missed stressed members)")
     print(f"  True Positives:  {cm[1][1]:,}  (correctly identified stressed)")
 
-    # ── Feature importance ────────────────────────────
+    # Feature importance
     print("\nFeature Importance:")
     importance = pd.DataFrame({
         "feature":   FEATURES,

@@ -27,13 +27,13 @@ def engineer_features(conn):
 
     print("\nEngineering features...")
 
-    # ── Discretionary ratio ───────────────────────────
+    # Discretionary ratio
     df["discretionary_ratio"] = (
         df["discretionary_spend"] /
         df["total_spend"].replace(0, np.nan)
     ).fillna(0).round(4)
 
-    # ── Spending volatility (std dev per member) ──────
+    # Spending volatility (std dev per member)
     df["spending_volatility"] = (
         df.groupby("member_id")["total_spend"]
         .transform("std")
@@ -41,7 +41,7 @@ def engineer_features(conn):
         .round(4)
     )
 
-    # ── Month over month spend change ─────────────────
+    # Month over month spend change
     df = df.sort_values(["member_id", "month"])
     df["mom_spend_change"] = (
         df.groupby("member_id")["total_spend"]
@@ -50,7 +50,7 @@ def engineer_features(conn):
         .round(4)
     )
 
-    # ── Simulate credit utilization ───────────────────
+    # Simulate credit utilization
     np.random.seed(42)
     df["credit_utilization"] = (
         (df["discretionary_ratio"] * 0.5) +
@@ -58,18 +58,18 @@ def engineer_features(conn):
         np.random.uniform(0.05, 0.25, len(df))
     ).clip(0, 1).round(4)
 
-    # ── Simulate savings rate ─────────────────────────
+    # Simulate savings rate
     df["savings_rate"] = (
         1 - df["discretionary_ratio"] - 0.35
     ).clip(0.01, 0.50).round(4)
 
-    # ── Overdraft frequency proxy ─────────────────────
+    # Overdraft frequency proxy
     df["overdraft_frequency"] = (
         (df["transaction_count"] / 10) *
         (df["credit_utilization"] > 0.65).astype(int)
     ).round(0)
 
-    # ── Stress label ──────────────────────────────────
+    # Stress label
     df["stress_score_raw"] = (
         (df["credit_utilization"]  > 0.50).astype(int) * 25 +
         (df["credit_utilization"]  > 0.70).astype(int) * 15 +
@@ -82,7 +82,7 @@ def engineer_features(conn):
         (df["spending_volatility"] > df["spending_volatility"].median()).astype(int) * 5
     )
 
-    # ── Label stressed if raw score >= 30 ─────────────
+    # Label stressed if raw score >= 30
     df["stress_label"] = (df["stress_score_raw"] >= 30).astype(int)
 
     print(f"\nFeature Summary:")
