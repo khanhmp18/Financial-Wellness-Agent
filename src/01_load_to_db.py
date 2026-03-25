@@ -34,7 +34,7 @@ def load_data():
     df = pd.concat([train, test], ignore_index=True)
     print(f"  Total rows: {len(df):,}")
 
-    # ── Clean & rename columns ──────────────────────────────────
+    # Clean & rename columns
     print("\nCleaning data...")
 
     # Parse datetime
